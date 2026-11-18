@@ -47,8 +47,8 @@ $baseApk = Join-Path $build 'base.apk'
     --manifest (Join-Path $android 'AndroidManifest.xml') `
     --min-sdk-version 24 `
     --target-sdk-version 35 `
-    --version-code 12 `
-    --version-name '0.2.1' `
+    --version-code 13 `
+    --version-name '0.2.2' `
     $resZip
 if ($LASTEXITCODE -ne 0) { throw 'aapt2 link failed' }
 
@@ -103,6 +103,7 @@ if ($LASTEXITCODE -ne 0) { throw 'signature verification failed' }
 $size = [math]::Round((Get-Item $final).Length / 1MB, 2)
 Write-Host ''
 Write-Host "OK: $final ($size MB)"
+
 
 
 

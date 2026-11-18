@@ -36,7 +36,7 @@
   padding-bottom: 24px;
 }
 
-/* 右侧整条边缘：平时完全不可见，拖动时显示一根细指示条 */
+/* 右侧整条边缘：平时完全不可见，按下呼出轮次面板 */
 .edgeStrip {
   position: fixed;
   right: 0;
@@ -45,29 +45,6 @@
   z-index: 25;
   width: 26px;
   touch-action: none;
-}
-
-.scrubThumb {
-  position: fixed;
-  right: 4px;
-  top: 56px;
-  bottom: 104px;
-  z-index: 26;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--dsw-alias-brand-primary);
-  opacity: 0.55;
-  pointer-events: none;
-  animation: thumbIn 0.15s ease;
-}
-
-@keyframes thumbIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 0.55;
-  }
 }
 
 .turnMask {

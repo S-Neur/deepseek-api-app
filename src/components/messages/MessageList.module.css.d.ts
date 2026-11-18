@@ -4,7 +4,6 @@ declare const styles: {
   readonly "column": string;
   readonly "earlier": string;
   readonly "edgeStrip": string;
-  readonly "scrubThumb": string;
   readonly "turnMask": string;
   readonly "turnPanel": string;
   readonly "turnPanelTitle": string;

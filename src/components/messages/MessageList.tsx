@@ -241,65 +241,46 @@ export const MessageList = ({
     scroller.scrollTo({ top: Math.max(0, scroller.scrollTop + offset - 8), behavior: 'smooth' })
   }, [jumpNonce, startIndex, messages.length])
 
-  // 右侧整条边缘当滚动条：拖动快速定位，长按叫出轮次面板
-  const [scrubbing, setScrubbing] = useState(false)
+  // 右侧整条边缘：按下就呼出轮次面板，拖动则在面板里按比例快速定位
   const edgeRef = useRef<HTMLDivElement>(null)
+  const turnListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const edge = edgeRef.current
-    const scroller = scrollRef.current
-    if (!edge || !scroller) {
+    if (!edge) {
       return
     }
-    let mode: 'idle' | 'pending' | 'drag' | 'menu' = 'idle'
-    let timer = 0
-    let startY = 0
+    let dragging = false
 
+    // 手指位置映射成面板的滚动比例，用来在几十个轮次里快速挪动
     const scrub = (clientY: number) => {
+      const list = turnListRef.current
+      if (!list) {
+        return
+      }
       const rect = edge.getBoundingClientRect()
       const ratio = Math.min(1, Math.max(0, (clientY - rect.top) / Math.max(1, rect.height)))
-      const max = scroller.scrollHeight - scroller.clientHeight
-      stickyRef.current = false
-      scroller.scrollTop = ratio * Math.max(0, max)
+      list.scrollTop = ratio * Math.max(0, list.scrollHeight - list.clientHeight)
     }
 
     const onStart = (event: TouchEvent) => {
       if (event.touches.length !== 1) {
         return
       }
-      startY = event.touches[0].clientY
-      mode = 'pending'
-      timer = window.setTimeout(() => {
-        if (mode === 'pending') {
-          mode = 'menu'
-          setTurnsOpen(true)
-        }
-      }, 380)
+      dragging = true
+      setTurnsOpen(true)
     }
 
     const onMove = (event: TouchEvent) => {
-      if (mode !== 'pending' && mode !== 'drag') {
+      if (!dragging) {
         return
       }
-      const y = event.touches[0].clientY
-      if (mode === 'pending') {
-        if (Math.abs(y - startY) < 8) {
-          return
-        }
-        window.clearTimeout(timer)
-        mode = 'drag'
-        setScrubbing(true)
-      }
       event.preventDefault()
-      scrub(y)
+      scrub(event.touches[0].clientY)
     }
 
     const onEnd = () => {
-      window.clearTimeout(timer)
-      if (mode === 'drag') {
-        setScrubbing(false)
-      }
-      mode = 'idle'
+      dragging = false
     }
 
     edge.addEventListener('touchstart', onStart, { passive: true })
@@ -307,13 +288,12 @@ export const MessageList = ({
     edge.addEventListener('touchend', onEnd)
     edge.addEventListener('touchcancel', onEnd)
     return () => {
-      window.clearTimeout(timer)
       edge.removeEventListener('touchstart', onStart)
       edge.removeEventListener('touchmove', onMove)
       edge.removeEventListener('touchend', onEnd)
       edge.removeEventListener('touchcancel', onEnd)
     }
-  }, [isMobile, startIndex])
+  }, [isMobile])
 
   const lastIndex = messages.length - 1
   const uploadRetryId = getUploadRetryId(messages, streaming)
@@ -357,15 +337,14 @@ export const MessageList = ({
           </div>
         </div>
         {footer}
-        {/* 右侧整条边缘：拖动快速定位，长按叫出轮次面板；不拖动时不画任何东西 */}
+        {/* 右侧整条边缘：按下呼出轮次面板，拖动快速定位；不操作时完全不可见 */}
         <div ref={edgeRef} className={styles.edgeStrip} aria-hidden />
-        {scrubbing ? <div className={styles.scrubThumb} /> : null}
         {turnsOpen ? (
           <>
             <div className={styles.turnMask} onClick={() => setTurnsOpen(false)} />
             <div className={styles.turnPanel} role="dialog" aria-label={t('turnListTitle')}>
               <div className={styles.turnPanelTitle}>{t('turnListTitle')}</div>
-              <div className={styles.turnPanelList}>
+              <div ref={turnListRef} className={styles.turnPanelList}>
                 {turns.map(({ message, index }, turnIndex) => (
                   <button
                     key={message.id}
