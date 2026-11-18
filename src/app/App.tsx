@@ -26,6 +26,7 @@ import { CollapsedSider } from '../components/sider/CollapsedSider.js'
 import { closeMobileSider } from '../components/sider/mobileSiderState.js'
 import { MobileSider, Sider } from '../components/sider/Sider.js'
 import { closeSettings } from '../components/settings/settingsDialogState.js'
+import { closeTurnPanel } from '../components/messages/turnPanelState.js'
 import { topLayer } from './navStack.js'
 import styles from './App.module.css'
 
@@ -90,6 +91,10 @@ export const App = () => {
       }
       if (layer === 'sider') {
         closeMobileSider()
+        return true
+      }
+      if (layer === 'turns') {
+        closeTurnPanel()
         return true
       }
       if (useChatStore.getState().activeId !== null) {

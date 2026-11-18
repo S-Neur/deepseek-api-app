@@ -89,16 +89,17 @@
   background: rgba(0, 0, 0, 0.12);
 }
 
-/* 面板几乎占满高度，上下留白对称 */
+/* 面板只占对话内容区域，上下留白对称，空白处点击即关 */
 .turnPanel {
   position: fixed;
   right: 46px;
-  top: 12px;
-  bottom: 12px;
+  top: 76px;
+  bottom: 124px;
   z-index: 41;
   display: flex;
   flex-direction: column;
   width: min(340px, calc(100vw - 70px));
+  max-height: 62vh;
   border: 1px solid var(--dsw-alias-border-l1);
   border-radius: 14px;
   background: var(--dsw-alias-bg-layer-3);

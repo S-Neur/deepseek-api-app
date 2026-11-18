@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
-/** 覆盖在页面之上的层：抽屉、设置、搜索面板 */
-export type NavLayer = 'sider' | 'settings' | 'search'
+/** 覆盖在页面之上的层：抽屉、设置、搜索面板、轮次面板 */
+export type NavLayer = 'sider' | 'settings' | 'search' | 'turns'
 
 /**
  * 返回键的层级栈。

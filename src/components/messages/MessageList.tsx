@@ -10,6 +10,7 @@ import {
 import { selectMessageVersion } from '../../services/chat/store.js'
 import type { Session } from '../../services/chat/types.js'
 import { closeSearchPanel } from '../search/searchPanelState.js'
+import { closeTurnPanel, openTurnPanel, useTurnPanel } from './turnPanelState.js'
 import { AssistantMessage } from './AssistantMessage.js'
 import { ScrollToBottomContext } from './scrollContext.js'
 import { UserMessage } from './UserMessage.js'
@@ -163,6 +164,8 @@ export const MessageList = ({
   }, [session.id, lastMessageId, scrollToBottom])
 
   useEffect(closeSearchPanel, [session.id, lastMessageId])
+  // 切换会话或离开对话页时收起轮次面板，避免导航栈里留下幽灵层
+  useEffect(() => closeTurnPanel, [session.id])
 
   const selectVersion = useCallback(
     (messageId: string, anchorTop: number) => {
@@ -203,7 +206,7 @@ export const MessageList = ({
   }, [isMobile, scrollToBottom])
 
   // 轮次跳转：每一轮提问一行，点了滚到那条消息（不在窗口里就先加载）
-  const [turnsOpen, setTurnsOpen] = useState(false)
+  const turnsOpen = useTurnPanel((state) => state.open)
   const [jumpNonce, setJumpNonce] = useState(0)
   const [jumping, setJumping] = useState(false)
   const jumpTimerRef = useRef(0)
@@ -217,7 +220,7 @@ export const MessageList = ({
   )
 
   const jumpToTurn = (id: string, index: number) => {
-    setTurnsOpen(false)
+    closeTurnPanel()
     setJumping(true)
     pendingJumpRef.current = id
     window.clearTimeout(jumpTimerRef.current)
@@ -277,7 +280,9 @@ export const MessageList = ({
         return
       }
       dragging = true
-      setTurnsOpen(true)
+      if (!useTurnPanel.getState().open) {
+        openTurnPanel()
+      }
     }
 
     const onMove = (event: TouchEvent) => {
@@ -356,7 +361,7 @@ export const MessageList = ({
         ) : null}
         {turnsOpen ? (
           <>
-            <div className={styles.turnMask} onClick={() => setTurnsOpen(false)} />
+            <div className={styles.turnMask} onClick={closeTurnPanel} />
             <div className={styles.turnPanel} role="dialog" aria-label={t('turnListTitle')}>
               <div className={styles.turnPanelTitle}>{t('turnListTitle')}</div>
               <div ref={turnListRef} className={styles.turnPanelList}>
