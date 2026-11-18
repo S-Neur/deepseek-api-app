@@ -36,36 +36,38 @@
   padding-bottom: 24px;
 }
 
-/* 轮次跳转：悬浮按钮 + 右侧面板 */
-.turnFab {
+/* 右侧整条边缘：平时完全不可见，拖动时显示一根细指示条 */
+.edgeStrip {
   position: fixed;
-  right: 8px;
-  top: 50%;
-  z-index: 30;
-  width: 30px;
-  height: 30px;
-  margin-top: -15px;
-  padding: 0;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 50%;
-  background: var(--dsw-alias-bg-layer-3);
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0.75;
-  transition: opacity 0.2s ease;
-
-  &:hover {
-    opacity: 1;
-    color: var(--dsw-alias-label-primary);
-  }
+  right: 0;
+  top: 56px;
+  bottom: 104px;
+  z-index: 25;
+  width: 26px;
+  touch-action: none;
 }
 
-.turnFabActive {
-  opacity: 1;
-  color: var(--dsw-alias-brand-primary);
-  border-color: var(--dsw-alias-brand-primary);
+.scrubThumb {
+  position: fixed;
+  right: 4px;
+  top: 56px;
+  bottom: 104px;
+  z-index: 26;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--dsw-alias-brand-primary);
+  opacity: 0.55;
+  pointer-events: none;
+  animation: thumbIn 0.15s ease;
+}
+
+@keyframes thumbIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.55;
+  }
 }
 
 .turnMask {

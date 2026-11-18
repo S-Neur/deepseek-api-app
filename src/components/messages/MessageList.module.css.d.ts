@@ -3,8 +3,8 @@ declare const styles: {
   readonly "scroll": string;
   readonly "column": string;
   readonly "earlier": string;
-  readonly "turnFab": string;
-  readonly "turnFabActive": string;
+  readonly "edgeStrip": string;
+  readonly "scrubThumb": string;
   readonly "turnMask": string;
   readonly "turnPanel": string;
   readonly "turnPanelTitle": string;

@@ -1,8 +1,7 @@
-import clsx from 'clsx'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { useIsMobile } from '../../app/viewport.js'
-import { formatMessageTime } from '../../utils/format.js'
+import { formatMessageDay } from '../../utils/format.js'
 import {
   buildMessageVersions,
   getVisibleMessages,
@@ -205,6 +204,7 @@ export const MessageList = ({
 
   // 轮次跳转：每一轮提问一行，点了滚到那条消息（不在窗口里就先加载）
   const [turnsOpen, setTurnsOpen] = useState(false)
+  const [jumpNonce, setJumpNonce] = useState(0)
   const pendingJumpRef = useRef<string | null>(null)
   const turns = useMemo(
     () =>
@@ -220,23 +220,100 @@ export const MessageList = ({
       setWindowStart(index)
     }
     pendingJumpRef.current = id
+    // 目标可能已经渲染，此时窗口不变化；用 nonce 强制跑一次定位
+    setJumpNonce((value) => value + 1)
   }
 
   useLayoutEffect(() => {
     const id = pendingJumpRef.current
-    if (!id) {
+    const scroller = scrollRef.current
+    if (!id || !scroller) {
       return
     }
-    const element = scrollRef.current?.querySelector<HTMLElement>(
-      `[data-message-id="${CSS.escape(id)}"]`
-    )
-    if (!element) {
+    const target = scroller.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`)
+    if (!target) {
       return
     }
     pendingJumpRef.current = null
     stickyRef.current = false
-    element.scrollIntoView({ block: 'start', behavior: 'smooth' })
-  }, [startIndex, messages.length])
+    // 直接算 scrollTop 比 scrollIntoView 可靠：滚动容器是这里而不是文档
+    const offset = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+    scroller.scrollTo({ top: Math.max(0, scroller.scrollTop + offset - 8), behavior: 'smooth' })
+  }, [jumpNonce, startIndex, messages.length])
+
+  // 右侧整条边缘当滚动条：拖动快速定位，长按叫出轮次面板
+  const [scrubbing, setScrubbing] = useState(false)
+  const edgeRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const edge = edgeRef.current
+    const scroller = scrollRef.current
+    if (!edge || !scroller) {
+      return
+    }
+    let mode: 'idle' | 'pending' | 'drag' | 'menu' = 'idle'
+    let timer = 0
+    let startY = 0
+
+    const scrub = (clientY: number) => {
+      const rect = edge.getBoundingClientRect()
+      const ratio = Math.min(1, Math.max(0, (clientY - rect.top) / Math.max(1, rect.height)))
+      const max = scroller.scrollHeight - scroller.clientHeight
+      stickyRef.current = false
+      scroller.scrollTop = ratio * Math.max(0, max)
+    }
+
+    const onStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) {
+        return
+      }
+      startY = event.touches[0].clientY
+      mode = 'pending'
+      timer = window.setTimeout(() => {
+        if (mode === 'pending') {
+          mode = 'menu'
+          setTurnsOpen(true)
+        }
+      }, 380)
+    }
+
+    const onMove = (event: TouchEvent) => {
+      if (mode !== 'pending' && mode !== 'drag') {
+        return
+      }
+      const y = event.touches[0].clientY
+      if (mode === 'pending') {
+        if (Math.abs(y - startY) < 8) {
+          return
+        }
+        window.clearTimeout(timer)
+        mode = 'drag'
+        setScrubbing(true)
+      }
+      event.preventDefault()
+      scrub(y)
+    }
+
+    const onEnd = () => {
+      window.clearTimeout(timer)
+      if (mode === 'drag') {
+        setScrubbing(false)
+      }
+      mode = 'idle'
+    }
+
+    edge.addEventListener('touchstart', onStart, { passive: true })
+    edge.addEventListener('touchmove', onMove, { passive: false })
+    edge.addEventListener('touchend', onEnd)
+    edge.addEventListener('touchcancel', onEnd)
+    return () => {
+      window.clearTimeout(timer)
+      edge.removeEventListener('touchstart', onStart)
+      edge.removeEventListener('touchmove', onMove)
+      edge.removeEventListener('touchend', onEnd)
+      edge.removeEventListener('touchcancel', onEnd)
+    }
+  }, [isMobile, startIndex])
 
   const lastIndex = messages.length - 1
   const uploadRetryId = getUploadRetryId(messages, streaming)
@@ -280,46 +357,35 @@ export const MessageList = ({
           </div>
         </div>
         {footer}
-        {turns.length > 1 ? (
+        {/* 右侧整条边缘：拖动快速定位，长按叫出轮次面板；不拖动时不画任何东西 */}
+        <div ref={edgeRef} className={styles.edgeStrip} aria-hidden />
+        {scrubbing ? <div className={styles.scrubThumb} /> : null}
+        {turnsOpen ? (
           <>
-            <button
-              type="button"
-              className={clsx(styles.turnFab, turnsOpen && styles.turnFabActive)}
-              aria-label={t('turnListLabel')}
-              onClick={() => setTurnsOpen((value) => !value)}
-            >
-              ≡
-            </button>
-            {turnsOpen ? (
-              <>
-                <div className={styles.turnMask} onClick={() => setTurnsOpen(false)} />
-                <div className={styles.turnPanel} role="dialog" aria-label={t('turnListTitle')}>
-                  <div className={styles.turnPanelTitle}>{t('turnListTitle')}</div>
-                  <div className={styles.turnPanelList}>
-                    {turns.map(({ message, index }, turnIndex) => (
-                      <button
-                        key={message.id}
-                        type="button"
-                        className={styles.turnItem}
-                        onClick={() => jumpToTurn(message.id, index)}
-                      >
-                        <span className={styles.turnItemIndex}>
-                          {t('turnItem', { index: turnIndex + 1 })}
-                        </span>
-                        <span className={styles.turnItemText}>
-                          {message.role === 'user' && message.content
-                            ? message.content.slice(0, 40)
-                            : t('untitledChat')}
-                        </span>
-                        <span className={styles.turnItemTime}>
-                          {formatMessageTime(message.createdAt) ?? ''}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : null}
+            <div className={styles.turnMask} onClick={() => setTurnsOpen(false)} />
+            <div className={styles.turnPanel} role="dialog" aria-label={t('turnListTitle')}>
+              <div className={styles.turnPanelTitle}>{t('turnListTitle')}</div>
+              <div className={styles.turnPanelList}>
+                {turns.map(({ message, index }, turnIndex) => (
+                  <button
+                    key={message.id}
+                    type="button"
+                    className={styles.turnItem}
+                    onClick={() => jumpToTurn(message.id, index)}
+                  >
+                    <span className={styles.turnItemIndex}>{turnIndex + 1}</span>
+                    <span className={styles.turnItemText}>
+                      {message.role === 'user' && message.content
+                        ? message.content.slice(0, 40)
+                        : t('untitledChat')}
+                    </span>
+                    <span className={styles.turnItemTime}>
+                      {formatMessageDay(message.createdAt) ?? ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </>
         ) : null}
       </div>

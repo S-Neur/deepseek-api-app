@@ -38,6 +38,20 @@ export const formatMessageTime = (value: number, now = Date.now()): string | nul
     : `${date.getFullYear()}-${monthDay} ${clock}`
 }
 
+/** 只要日期：今天显示"今天"，今年显示月-日，跨年带年份 */
+export const formatMessageDay = (value: number, now = Date.now()): string | null => {
+  const date = toDate(value)
+  if (!date) {
+    return null
+  }
+  const current = new Date(now)
+  if (current.toDateString() === date.toDateString()) {
+    return `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  }
+  const monthDay = `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  return current.getFullYear() === date.getFullYear() ? monthDay : `${date.getFullYear()}-${monthDay}`
+}
+
 /** token 数缩写：1234 → 1.2K，1234567 → 1.2M */
 export const formatTokens = (value: number): string => {
   if (!Number.isFinite(value) || value <= 0) {
