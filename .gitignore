@@ -17,3 +17,6 @@ tmp/
 # 鏋勫缓浜х墿涓庣鍚嶆潗鏂欎笉杩涚増鏈簱
 android/keystore/
 android/assets/
+
+# 设计用候选图，版权状态不清晰，不进公开仓库
+assets/candidates/

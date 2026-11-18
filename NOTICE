@@ -1,0 +1,35 @@
+# 第三方素材说明
+
+本项目代码沿用 [deepseek-ai/chat-demo](https://github.com/deepseek-ai/chat-demo) 的 MIT 许可。
+以下是代码以外、需要单独说明来源的内容。
+
+## 图标
+
+`assets/icon-*.png`、`assets/apple-touch-icon.png`、`assets/favicon-64.png`、
+`android/res/drawable/ic_launcher.png` 目前的图案取自 DeepSeek 官方客户端
+（`com.deepseek.chat`）的 adaptive icon 前景矢量。
+
+**DeepSeek 的名称与鲸鱼标识是深度求索的商标**，本项目为非官方个人项目，
+与深度求索无隶属关系。如果你要发布或分发本项目，建议替换成自己的图标，
+或明确标注为非官方的个人使用构建。
+
+## 候选图标（发布前建议删除）
+
+`assets/candidates/` 下是设计阶段的候选图，包含：
+
+| 文件 | 来源 | 许可 |
+| --- | --- | --- |
+| `3-鲸鱼娘浅蓝.png`、`4-鲸鱼娘白底.png` | [fornarwhal/deepseek-whale-girl-icon](https://github.com/fornarwhal/deepseek-whale-girl-icon) | 该仓库未显式声明，二次分发前请与作者确认 |
+| `1-官方图标.png`、`2-官方蓝底白鲸.png`、`官方鲸鱼.svg` | 官方 App 图标提取 | 见上文商标说明 |
+
+把这些图放在公开仓库里版权状态并不清晰，**建议发布时删掉整个 `assets/candidates/`
+目录**（构建只用到 `assets/icon-*.png`，删掉不影响打包）。
+
+更多同类素材可参考：
+
+- [xiaoweigen/deepseek-dafeiyu-assets](https://github.com/xiaoweigen/deepseek-dafeiyu-assets)（CC BY-NC-SA 4.0）
+- [the-beating-light-of-the-nail/deepseek-chan-meme-pack](https://github.com/the-beating-light-of-the-nail/deepseek-chan-meme-pack)
+
+## 字体与其他
+
+KaTeX 字体随依赖引入，遵循其 MIT 许可。
