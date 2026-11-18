@@ -205,6 +205,8 @@ export const MessageList = ({
   // 轮次跳转：每一轮提问一行，点了滚到那条消息（不在窗口里就先加载）
   const [turnsOpen, setTurnsOpen] = useState(false)
   const [jumpNonce, setJumpNonce] = useState(0)
+  const [jumping, setJumping] = useState(false)
+  const jumpTimerRef = useRef(0)
   const pendingJumpRef = useRef<string | null>(null)
   const turns = useMemo(
     () =>
@@ -216,12 +218,18 @@ export const MessageList = ({
 
   const jumpToTurn = (id: string, index: number) => {
     setTurnsOpen(false)
-    if (index < startIndex) {
-      setWindowStart(index)
-    }
+    setJumping(true)
     pendingJumpRef.current = id
-    // 目标可能已经渲染，此时窗口不变化；用 nonce 强制跑一次定位
-    setJumpNonce((value) => value + 1)
+    window.clearTimeout(jumpTimerRef.current)
+    // 先让「正在跳转」渲染出来，再做补渲染这种重活，否则提示会晚一步才出现
+    jumpTimerRef.current = window.setTimeout(() => {
+      if (index < startIndex) {
+        setWindowStart(index)
+      }
+      setJumpNonce((value) => value + 1)
+      // 兜底：定位失败也不会一直转圈
+      window.setTimeout(() => setJumping(false), 1200)
+    }, 60)
   }
 
   useLayoutEffect(() => {
@@ -239,6 +247,7 @@ export const MessageList = ({
     // 直接算 scrollTop 比 scrollIntoView 可靠：滚动容器是这里而不是文档
     const offset = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
     scroller.scrollTo({ top: Math.max(0, scroller.scrollTop + offset - 8), behavior: 'smooth' })
+    window.setTimeout(() => setJumping(false), 400)
   }, [jumpNonce, startIndex, messages.length])
 
   // 右侧整条边缘：按下就呼出轮次面板，拖动则在面板里按比例快速定位
@@ -337,8 +346,14 @@ export const MessageList = ({
           </div>
         </div>
         {footer}
-        {/* 右侧整条边缘：按下呼出轮次面板，拖动快速定位；不操作时完全不可见 */}
+        {/* 右侧整条边缘：按下呼出轮次面板，拖动快速定位；面板打开时仍然可用 */}
         <div ref={edgeRef} className={styles.edgeStrip} aria-hidden />
+        {jumping ? (
+          <div className={styles.jumpHint} role="status">
+            <span className={styles.spinner} />
+            {t('jumpingToTurn')}
+          </div>
+        ) : null}
         {turnsOpen ? (
           <>
             <div className={styles.turnMask} onClick={() => setTurnsOpen(false)} />

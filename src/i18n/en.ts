@@ -36,6 +36,7 @@ export const en = {
   timestampOff: 'Off',
   turnListLabel: 'Turns',
   turnListTitle: 'Jump to a turn',
+  jumpingToTurn: 'Jumping…',
   turnItem: 'Turn {index}',
   more: 'More',
   close: 'Close',

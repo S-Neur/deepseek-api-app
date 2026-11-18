@@ -31,6 +31,7 @@ export const zh = {
   timestampOff: '已关闭',
   turnListLabel: '轮次',
   turnListTitle: '跳转到某一轮',
+  jumpingToTurn: '正在跳转…',
   turnItem: '第 {index} 轮',
   more: '更多',
   close: '关闭',
