@@ -14,6 +14,7 @@ import type {
   ReplyStatus,
   UserMessage,
 } from './types.js'
+import { useSettings } from '../settings.js'
 
 /**
  * 文件按 Files API 的 file_id（附件的 serverId）引用：图片用 image 块，其余用 document 块。
@@ -201,8 +202,24 @@ const isUsableReply = (message: Message): message is AssistantMessage =>
   !message.blocks.some((block) => block.type === 'text' && block.isTemplate) &&
   getReplyText(message) !== ''
 
+/**
+ * 设置开启「发送时间戳」时，把提问的发生时间以 `[2026-11-19 00:22]` 的形式附在正文前。
+ * 只影响发给模型的内容，本地显示和历史文件不受影响。
+ */
+const withTimestamp = ({ content, createdAt }: UserMessage): string => {
+  if (!useSettings.getState().sendTimestamps || !Number.isFinite(createdAt)) {
+    return content
+  }
+  const date = new Date(createdAt)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  const stamp = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return `[${stamp}] ${content}`.trim()
+}
+
 /** 有文件时用内容块数组：先文件后文本，文件按 Files API 的 file_id 引用 */
-const toUserParam = ({ content, files }: UserMessage): MessageParam => {
+const toUserParam = (message: UserMessage): MessageParam => {
+  const { files } = message
+  const content = withTimestamp(message)
   const blocks = toFileBlocks(files)
   return blocks.length === 0
     ? { role: 'user', content }

@@ -23,6 +23,7 @@ import {
   isChineseBrowser,
   setLocale,
   setLocation,
+  setSendTimestamps,
   setThemePreference,
   setTtsVoice,
   useSettings,
@@ -103,6 +104,7 @@ const SettingsContent = () => {
               <LocaleSetting />
               <TtsVoiceSetting />
               <LocationSetting />
+              <TimestampSetting />
             </>
           ) : (
             <>
@@ -512,6 +514,29 @@ const ImportHistory = ({
             }}
           />
         </>
+      }
+    />
+  )
+}
+
+/** 是否把每轮提问的时间作为上下文发给模型 */
+const TimestampSetting = () => {
+  const t = useTranslate()
+  const sendTimestamps = useSettings((state) => state.sendTimestamps)
+  return (
+    <SettingCell
+      label={t('timestampLabel')}
+      description={t('timestampDescription')}
+      status={null}
+      action={
+        <Button
+          variant={sendTimestamps ? 'outlined' : 'outlined'}
+          size="m"
+          className={styles.cellButton}
+          onClick={() => setSendTimestamps(!sendTimestamps)}
+        >
+          {sendTimestamps ? t('timestampOn') : t('timestampOff')}
+        </Button>
       }
     />
   )

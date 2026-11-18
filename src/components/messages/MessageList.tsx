@@ -1,6 +1,8 @@
+import clsx from 'clsx'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslate } from '../../i18n/index.js'
 import { useIsMobile } from '../../app/viewport.js'
+import { formatMessageTime } from '../../utils/format.js'
 import {
   buildMessageVersions,
   getVisibleMessages,
@@ -201,6 +203,41 @@ export const MessageList = ({
     return () => el.removeEventListener('scroll', onScroll)
   }, [isMobile, scrollToBottom])
 
+  // 轮次跳转：每一轮提问一行，点了滚到那条消息（不在窗口里就先加载）
+  const [turnsOpen, setTurnsOpen] = useState(false)
+  const pendingJumpRef = useRef<string | null>(null)
+  const turns = useMemo(
+    () =>
+      messages
+        .map((message, index) => ({ message, index }))
+        .filter(({ message }) => message.role === 'user'),
+    [messages]
+  )
+
+  const jumpToTurn = (id: string, index: number) => {
+    setTurnsOpen(false)
+    if (index < startIndex) {
+      setWindowStart(index)
+    }
+    pendingJumpRef.current = id
+  }
+
+  useLayoutEffect(() => {
+    const id = pendingJumpRef.current
+    if (!id) {
+      return
+    }
+    const element = scrollRef.current?.querySelector<HTMLElement>(
+      `[data-message-id="${CSS.escape(id)}"]`
+    )
+    if (!element) {
+      return
+    }
+    pendingJumpRef.current = null
+    stickyRef.current = false
+    element.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [startIndex, messages.length])
+
   const lastIndex = messages.length - 1
   const uploadRetryId = getUploadRetryId(messages, streaming)
   return (
@@ -243,6 +280,48 @@ export const MessageList = ({
           </div>
         </div>
         {footer}
+        {turns.length > 1 ? (
+          <>
+            <button
+              type="button"
+              className={clsx(styles.turnFab, turnsOpen && styles.turnFabActive)}
+              aria-label={t('turnListLabel')}
+              onClick={() => setTurnsOpen((value) => !value)}
+            >
+              ≡
+            </button>
+            {turnsOpen ? (
+              <>
+                <div className={styles.turnMask} onClick={() => setTurnsOpen(false)} />
+                <div className={styles.turnPanel} role="dialog" aria-label={t('turnListTitle')}>
+                  <div className={styles.turnPanelTitle}>{t('turnListTitle')}</div>
+                  <div className={styles.turnPanelList}>
+                    {turns.map(({ message, index }, turnIndex) => (
+                      <button
+                        key={message.id}
+                        type="button"
+                        className={styles.turnItem}
+                        onClick={() => jumpToTurn(message.id, index)}
+                      >
+                        <span className={styles.turnItemIndex}>
+                          {t('turnItem', { index: turnIndex + 1 })}
+                        </span>
+                        <span className={styles.turnItemText}>
+                          {message.role === 'user' && message.content
+                            ? message.content.slice(0, 40)
+                            : t('untitledChat')}
+                        </span>
+                        <span className={styles.turnItemTime}>
+                          {formatMessageTime(message.createdAt) ?? ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </>
+        ) : null}
       </div>
     </ScrollToBottomContext.Provider>
   )

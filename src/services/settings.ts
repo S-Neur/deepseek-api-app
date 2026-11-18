@@ -19,6 +19,8 @@ type Settings = {
   siderCollapsed: boolean
   /** 置顶的会话 ID（最近置顶的排前面）；存在本地设置里，不进会话数据库 */
   pinnedSessionIds: string[]
+  /** 是否把每条提问的发生时间作为上下文发给模型 */
+  sendTimestamps: boolean
 }
 
 const KEYS = {
@@ -31,6 +33,7 @@ const KEYS = {
   search: 'chat-demo:search',
   siderCollapsed: 'chat-demo:sider-collapsed',
   pinnedSessionIds: 'chat-demo:pinned-sessions',
+  sendTimestamps: 'chat-demo:send-timestamps',
 } as const
 
 const read = (key: string) => {
@@ -109,6 +112,7 @@ export const useSettings = create<Settings>(() => ({
   search: read(KEYS.search) === 'true',
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
   pinnedSessionIds: initialPinnedSessionIds(),
+  sendTimestamps: read(KEYS.sendTimestamps) === 'true',
 }))
 
 export const setLocale = (locale: Locale) => {
@@ -158,4 +162,9 @@ export const togglePinnedSession = (id: string) => {
   const next = current.includes(id) ? current.filter((item) => item !== id) : [id, ...current]
   write(KEYS.pinnedSessionIds, JSON.stringify(next))
   useSettings.setState({ pinnedSessionIds: next })
+}
+
+export const setSendTimestamps = (sendTimestamps: boolean) => {
+  write(KEYS.sendTimestamps, String(sendTimestamps))
+  useSettings.setState({ sendTimestamps })
 }
