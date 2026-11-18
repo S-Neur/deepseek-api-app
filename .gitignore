@@ -1,11 +1,19 @@
 node_modules/
 dist/
 build/
+build-android/
+release/
+tmp/
+.toolchain/
 .pnpm-store/
+.npm-cache/
 .cache/
 *.log
 .DS_Store
 .env
 .env.*
 !.env.example
-tmp/
+
+# 构建产物与签名材料不进版本库
+android/keystore/
+android/assets/

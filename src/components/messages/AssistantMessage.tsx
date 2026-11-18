@@ -17,6 +17,7 @@ import { ReadAloudButton } from './ReadAloudButton.js'
 import { CopyButton } from './CopyButton.js'
 import { ReplyArea } from './ReplyArea.js'
 import { useReplyView } from './useReplyView.js'
+import { formatMessageTime, formatTokens } from '../../utils/format.js'
 import {
   BranchSwitcher,
   type MessageVersions,
@@ -25,6 +26,50 @@ import {
 import styles from './AssistantMessage.module.css'
 
 const TOP_UP_URL = 'https://platform.deepseek.com/top_up'
+
+/**
+ * 这一轮的元信息：发生时间、token 用量、缓存命中。
+ * 放在操作按钮行的末尾，不额外占一行高度。
+ */
+const MessageMeta = ({ message }: { message: AssistantMessageType }) => {
+  const t = useTranslate()
+  const usage = message.usage
+  const time = formatMessageTime(message.createdAt)
+  if (!time && !usage) {
+    return null
+  }
+  const cached = usage?.cache_read_input_tokens ?? 0
+  const created = usage?.cache_creation_input_tokens ?? 0
+  const input = (usage?.input_tokens ?? 0) + created + cached
+  const output = usage?.output_tokens ?? 0
+  const parts: string[] = []
+  if (time) {
+    parts.push(time)
+  }
+  if (usage) {
+    parts.push(`${t('messageMetaInput')} ${formatTokens(input)}`)
+    if (cached > 0) {
+      parts.push(`${t('messageMetaCached')} ${formatTokens(cached)}`)
+    }
+    parts.push(`${t('messageMetaOutput')} ${formatTokens(output)}`)
+  }
+  const detail = usage
+    ? [
+        time,
+        `${t('messageMetaInput')}: ${input}`,
+        `${t('messageMetaCached')}: ${cached}`,
+        `${t('messageMetaCacheWrite')}: ${created}`,
+        `${t('messageMetaOutput')}: ${output}`,
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : (time ?? '')
+  return (
+    <div className={styles.meta} title={detail}>
+      {parts.join(' · ')}
+    </div>
+  )
+}
 
 export const AssistantMessage = memo(function AssistantMessage({
   sessionId,
@@ -171,6 +216,7 @@ export const AssistantMessage = memo(function AssistantMessage({
               {t('continueGenerating')}
             </Button>
           ) : null}
+          <MessageMeta message={message} />
         </div>
       )}
     </div>

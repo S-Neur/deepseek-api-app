@@ -98,6 +98,9 @@
   position: relative;
   margin-top: 16px;
   padding-top: 4px;
+  /* 会话多时（几百条）跳过屏幕外条目的渲染，滚动和切换会话都明显更快 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 
   &:first-child {
     margin-top: 0;
@@ -198,12 +201,29 @@
   bottom: 0;
   left: 0;
   z-index: 800;
+  transform: translate3d(-100%, 0, 0);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* 手势拖拽期间关闭过渡，位移直接跟手 */
+.drawerDragging {
+  transition: none;
 }
 
 .drawerMask {
   position: absolute;
   inset: 0;
   z-index: 799;
+  background-color: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.maskDragging {
+  transition: none;
 }
 
 .mobile {

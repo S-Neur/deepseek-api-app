@@ -62,6 +62,21 @@ export type ChatMessage = {
   inserted_at: Iso8601Utc
   /** 按发生顺序排列 */
   fragments: Fragment[]
+  /**
+   * 本项目扩展字段（**非官方格式**）：这一轮的 token 拆分，官方格式里没有对应位置。
+   * 官方导入端不认未知字段，删掉它即可完全回到标准格式：
+   *   查找： ,"ds_usage_detail":\{[^{}]*\}
+   *   替换： （空）
+   */
+  ds_usage_detail?: UsageDetail
+}
+
+/** 与 MessageUsage 对齐的 token 拆分 */
+export type UsageDetail = {
+  input_tokens: number
+  cache_creation_input_tokens: number
+  cache_read_input_tokens: number
+  output_tokens: number
 }
 
 /** 用户的提问 */

@@ -16,6 +16,7 @@ import {
   importHistory,
 } from '../../services/chat/backup.js'
 import { useIsMobile } from '../../app/viewport.js'
+import { saveBlobToDevice } from '../../services/saveFile.js'
 import { useChatStore } from '../../services/chat/store.js'
 import { regionCodes, getRegionName, provinces } from '../../services/location.js'
 import {
@@ -27,6 +28,8 @@ import {
   useSettings,
   type ThemePreference,
 } from '../../services/settings.js'
+import { fetchBalance, sumLocalUsage } from '../../services/api/billing.js'
+import { formatTokens } from '../../utils/format.js'
 import { useTranslate, type TranslationKey, type TranslationMessage } from '../../i18n/index.js'
 import { Button } from '../base/Button.js'
 import { Modal } from '../base/Modal.js'
@@ -104,6 +107,7 @@ const SettingsContent = () => {
           ) : (
             <>
               <ApiKeyField editor={apiKeyEditor} />
+              <UsageAndBalance disabled={historyBusy} />
               <ImportHistory historyImport={historyImport} disabled={historyBusy} />
               <ExportHistory disabled={historyBusy} />
               <SettingCell
@@ -450,7 +454,8 @@ const useHistoryImport = () => {
     importing.current = true
     setFile(null)
     setBusy(true)
-    setStatus(null)
+    // 大文件解析要跑很久，必须让用户看到"正在处理"而不是按钮变灰后毫无反应
+    setStatus({ key: 'historyImporting' })
     try {
       const count = await importHistory(file)
       setStatus({ key: count === 1 ? 'historyImportedOne' : 'historyImported', params: { count } })
@@ -512,6 +517,66 @@ const ImportHistory = ({
   )
 }
 
+/** API 余额（官方 /user/balance）+ 本地累计 token 用量 */
+const UsageAndBalance = ({ disabled }: { disabled: boolean }) => {
+  const t = useTranslate()
+  const apiKey = useSettings((state) => state.apiKey)
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState<Status>(null)
+
+  const onQuery = async () => {
+    if (!apiKey) {
+      setStatus({ key: 'balanceNoApiKey', error: true })
+      return
+    }
+    setBusy(true)
+    setStatus({ key: 'balanceQuerying' })
+    try {
+      const [balance, usage] = await Promise.all([fetchBalance(apiKey), sumLocalUsage()])
+      const info = balance.balance_infos[0]
+      setStatus(
+        info
+          ? {
+              key: 'balanceResult',
+              params: {
+                total: `${info.total_balance} ${info.currency}`,
+                granted: info.granted_balance,
+                topped: info.topped_up_balance,
+                turns: usage.turns,
+                input: formatTokens(usage.input),
+                cached: formatTokens(usage.cached),
+                output: formatTokens(usage.output),
+              },
+            }
+          : { key: 'balanceEmpty', error: true }
+      )
+    } catch (error) {
+      setStatus(errorStatus('balanceQueryFailed', error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <SettingCell
+      label={t('balanceLabel')}
+      description={t('balanceDescription')}
+      status={status}
+      action={
+        <Button
+          variant="outlined"
+          size="m"
+          className={styles.cellButton}
+          disabled={disabled || busy}
+          onClick={() => void onQuery()}
+        >
+          {t('balanceQuery')}
+        </Button>
+      }
+    />
+  )
+}
+
 /** 将全部会话及图片导出为 ZIP 文件并下载 */
 const ExportHistory = ({ disabled }: { disabled: boolean }) => {
   const t = useTranslate()
@@ -521,15 +586,18 @@ const ExportHistory = ({ disabled }: { disabled: boolean }) => {
 
   const onExport = async () => {
     setBusy(true)
-    setStatus(null)
+    // 打包几百个会话要一段时间，先给出"正在打包"，避免按钮变灰后毫无反馈
+    setStatus({ key: 'historyExportPreparing' })
     try {
       const { name, blob } = await exportHistory()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = name
-      link.click()
-      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      setStatus({ key: 'historyExporting', params: { percent: 0 } })
+      const location = await saveBlobToDevice(blob, name, (written, total) => {
+        setStatus({
+          key: 'historyExporting',
+          params: { percent: Math.round((written / total) * 100) },
+        })
+      })
+      setStatus({ key: 'historyExported', params: { path: location } })
     } catch (error) {
       setStatus(errorStatus('historyExportFailed', error))
     } finally {

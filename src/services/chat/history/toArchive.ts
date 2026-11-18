@@ -251,6 +251,17 @@ export const toSessionFile = (original: Session, exportImage: ExportImage): Sess
       search_enabled: reply?.search ?? false,
       accumulated_token_usage: message.role === 'user' ? 0 : contextTokens(message),
       inserted_at: iso(message.createdAt),
+      // 扩展字段：保住这一轮的 token 拆分（官方格式没有对应位置）
+      ...(message.role === 'assistant' && message.usage
+        ? {
+            ds_usage_detail: {
+              input_tokens: message.usage.input_tokens,
+              cache_creation_input_tokens: message.usage.cache_creation_input_tokens,
+              cache_read_input_tokens: message.usage.cache_read_input_tokens,
+              output_tokens: message.usage.output_tokens,
+            },
+          }
+        : {}),
       fragments:
         message.role === 'user' ? userFragments(message, exportImage) : assistantFragments(message),
     }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#ff4d6bfe</color>
+    <color name="page_bg">#ffffffff</color>
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/page_bg</item>
+        <!-- 状态栏默认跟页面同色、图标深色；运行时会由页面把真实背景色同步过来 -->
+        <item name="android:statusBarColor">@color/page_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/page_bg</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <!-- targetSdk 35 在 Android 15 上强制 edge-to-edge（内容顶到状态栏下面）。
+             这个开关让系统栏保持不透明、内容避开它们，只在 API 35 上生效。 -->
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>

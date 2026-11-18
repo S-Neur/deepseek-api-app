@@ -2,9 +2,35 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
-    <title>API 使用 demo</title>
+    <meta name="description" content="自建 DeepSeek 对话客户端，直连官方 API，Key 只存在本机。" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="DeepSeek" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <title>DeepSeek</title>
+    <script>
+      // 只在安全上下文（https / localhost）注册，局域网 http 下静默跳过；
+      // 装进 WebView 时资源本来就在本地，再套一层 service worker 没有意义。
+      if (
+        'serviceWorker' in navigator &&
+        window.isSecureContext &&
+        !location.hostname.endsWith('androidplatform.net')
+      ) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function () {})
+        })
+      }
+      // 独立窗口（已安装）时把状态栏配色交给应用主题
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        document.documentElement.dataset.standalone = 'true'
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

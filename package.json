@@ -42,6 +42,7 @@
     "@types/node": "~20.9.2",
     "oxfmt": "0.48.0",
     "oxlint": "1.63.0",
+    "sharp": "^0.35.5",
     "typescript": "7.0.2"
   }
 }

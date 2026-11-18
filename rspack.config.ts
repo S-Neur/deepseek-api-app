@@ -82,7 +82,17 @@ export const createConfig = ({
     }),
     new rspack.DefinePlugin({ __API_ORIGIN__: JSON.stringify(apiOrigin) }),
     new rspack.CopyRspackPlugin({
-      patterns: [{ from: path.resolve(root, 'LICENSE'), to: 'LICENSE', toType: 'file' }],
+      patterns: [
+        { from: path.resolve(root, 'LICENSE'), to: 'LICENSE', toType: 'file' },
+        // PWA 外壳：manifest、service worker、图标，一并放到 dist 根目录
+        // candidates 只是设计用的候选图，不进产物
+        {
+          from: path.resolve(root, 'assets'),
+          to: '.',
+          toType: 'dir',
+          globOptions: { ignore: ['**/candidates/**'] },
+        },
+      ],
     }),
   ],
   performance: { hints: false },

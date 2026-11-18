@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useTranslate } from '../../i18n/index.js'
 import { useIsMobile } from '../../app/viewport.js'
 import {
   buildMessageVersions,
@@ -32,6 +33,11 @@ import styles from './MessageList.module.css'
 /** 距底部小于该值时视为在底部，流式内容增长时跟随 */
 const STICKY_THRESHOLD = 40
 const EMPTY_VERSIONS: MessageVersions = { ids: [], index: -1 }
+/** 首屏只渲染最近这么多条消息（约 6 轮），往前翻再逐批补 */
+const INITIAL_VISIBLE = 12
+const VISIBLE_STEP = 12
+/** 滚动到距顶部多少像素时自动补一批更早的消息 */
+const LOAD_OLDER_THRESHOLD = 240
 
 export const MessageList = ({
   session,
@@ -43,12 +49,68 @@ export const MessageList = ({
   footer: React.ReactNode
 }) => {
   const isMobile = useIsMobile()
+  const t = useTranslate()
   const scrollRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const stickyRef = useRef(true)
   const scrollTopRef = useRef(0)
   const restoreScrollRef = useRef<{ messageId: string; top: number } | null>(null)
   const messages = getVisibleMessages(session)
+
+  // 长对话只渲染最近一批：窗口外的消息不进 DOM。
+  // windowStart 为 null 时表示"跟着末尾走"（新消息到达时窗口自动前移）；用户上翻后固定起点。
+  const [windowStart, setWindowStart] = useState<number | null>(null)
+  useEffect(() => {
+    setWindowStart(null)
+  }, [session.id])
+  const startIndex = Math.min(windowStart ?? Math.max(0, messages.length - INITIAL_VISIBLE), messages.length)
+  const hiddenCount = startIndex
+  const renderedMessages = hiddenCount > 0 ? messages.slice(startIndex) : messages
+  const preserveScrollRef = useRef<{ height: number; top: number } | null>(null)
+
+  const showOlder = useCallback(() => {
+    const element = scrollRef.current
+    if (!element || hiddenCount === 0) {
+      return
+    }
+    // 补内容会把上方撑高，先记下高度，渲染后补回滚动偏移，视觉上不跳动
+    preserveScrollRef.current = { height: element.scrollHeight, top: element.scrollTop }
+    setWindowStart(Math.max(0, startIndex - VISIBLE_STEP))
+  }, [hiddenCount, startIndex])
+
+  useLayoutEffect(() => {
+    const element = scrollRef.current
+    const saved = preserveScrollRef.current
+    if (!element || !saved) {
+      return
+    }
+    preserveScrollRef.current = null
+    element.scrollTop = saved.top + (element.scrollHeight - saved.height)
+  }, [startIndex])
+
+  // 滚到接近顶部时自动补更早的消息
+  useEffect(() => {
+    const element = scrollRef.current
+    if (!element || hiddenCount === 0) {
+      return
+    }
+    let armed = true
+    const onScroll = () => {
+      if (!armed) {
+        return
+      }
+      if (element.scrollTop < LOAD_OLDER_THRESHOLD) {
+        armed = false
+        showOlder()
+        // 留一帧给新内容渲染，避免同一次滚动里连续补两批
+        setTimeout(() => {
+          armed = true
+        }, 300)
+      }
+    }
+    element.addEventListener('scroll', onScroll, { passive: true })
+    return () => element.removeEventListener('scroll', onScroll)
+  }, [hiddenCount, showOlder, isMobile])
   const [previousVersions, setPreviousVersions] = useState(() =>
     buildMessageVersions(session, new Map())
   )
@@ -146,15 +208,21 @@ export const MessageList = ({
       <div ref={isMobile ? undefined : scrollRef} className={styles.container}>
         <div ref={isMobile ? scrollRef : undefined} className={styles.scroll}>
           <div ref={contentRef} className={styles.column}>
-            {messages.map((message, index) =>
-              message.role === 'user' ? (
+            {hiddenCount > 0 ? (
+              <button type="button" className={styles.earlier} onClick={showOlder}>
+                {t('showEarlierMessages', { count: Math.min(hiddenCount, VISIBLE_STEP) })}
+              </button>
+            ) : null}
+            {renderedMessages.map((message, index) => {
+              const absoluteIndex = startIndex + index
+              return message.role === 'user' ? (
                 <UserMessage
                   key={message.id}
                   sessionId={session.id}
                   message={message}
                   retryUploadId={uploadRetryId}
-                  isFirst={index === 0}
-                  isLast={index === lastIndex || index === lastIndex - 1}
+                  isFirst={absoluteIndex === 0}
+                  isLast={absoluteIndex === lastIndex || absoluteIndex === lastIndex - 1}
                   busy={streaming}
                   versions={versions.get(message.id) ?? EMPTY_VERSIONS}
                   onSelectVersion={selectVersion}
@@ -164,14 +232,14 @@ export const MessageList = ({
                   key={message.id}
                   sessionId={session.id}
                   message={message}
-                  isLast={index === lastIndex}
-                  streaming={streaming && index === lastIndex}
+                  isLast={absoluteIndex === lastIndex}
+                  streaming={streaming && absoluteIndex === lastIndex}
                   busy={streaming}
                   versions={versions.get(message.id) ?? EMPTY_VERSIONS}
                   onSelectVersion={selectVersion}
                 />
               )
-            )}
+            })}
           </div>
         </div>
         {footer}

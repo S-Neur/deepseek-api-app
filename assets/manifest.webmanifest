@@ -1,0 +1,21 @@
+{
+  "name": "DeepSeek 客户端",
+  "short_name": "DeepSeek",
+  "description": "自建 DeepSeek 对话客户端，直连官方 API，Key 只存在本机。",
+  "id": "/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#4d6bfe",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

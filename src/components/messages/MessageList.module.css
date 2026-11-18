@@ -35,3 +35,23 @@
   margin: 0 auto;
   padding-bottom: 24px;
 }
+
+/* 「显示更早的消息」：滚动到顶部时自动触发，也可以直接点 */
+.earlier {
+  display: block;
+  margin: 12px auto 20px;
+  padding: 6px 14px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 100px;
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: var(--dsw-alias-label-primary);
+  }
+}

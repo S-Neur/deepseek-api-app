@@ -3,14 +3,57 @@ import { useSettings, type ThemePreference } from '../services/settings.js'
 
 export type Theme = 'light' | 'dark'
 
+/** 原生壳注入的系统深浅色（WebView 里 prefers-color-scheme 不一定可靠） */
+declare global {
+  interface Window {
+    AppHost?: {
+      isSystemDark: () => boolean
+      setStatusBar: (hexColor: string, darkIcons: boolean) => void
+      exportBegin?: (fileName: string) => string
+      exportChunk?: (token: string, base64: string) => boolean
+      exportEnd?: (token: string) => string
+      exportAbort?: (token: string) => void
+    }
+    __setSystemDark?: (dark: boolean) => void
+    __appBack?: () => boolean
+  }
+}
+
 const query = window.matchMedia('(prefers-color-scheme: dark)')
+
+/** 优先用原生给的值；纯浏览器环境下退回 matchMedia */
+let nativeDark: boolean | null = null
+try {
+  const value = window.AppHost?.isSystemDark?.()
+  if (typeof value === 'boolean') {
+    nativeDark = value
+  }
+} catch {
+  nativeDark = null
+}
 
 const subscribeOsTheme = (listener: () => void) => {
   query.addEventListener('change', listener)
-  return () => query.removeEventListener('change', listener)
+  const onNative = () => listener()
+  window.addEventListener('systemthemechange', onNative)
+  return () => {
+    query.removeEventListener('change', listener)
+    window.removeEventListener('systemthemechange', onNative)
+  }
 }
 
-const getOsTheme = (): Theme => (query.matches ? 'dark' : 'light')
+const getOsTheme = (): Theme => {
+  if (nativeDark !== null) {
+    return nativeDark ? 'dark' : 'light'
+  }
+  return query.matches ? 'dark' : 'light'
+}
+
+/** 原生壳在系统切换深浅色时调用 */
+window.__setSystemDark = (dark: boolean) => {
+  nativeDark = dark
+  window.dispatchEvent(new Event('systemthemechange'))
+}
 
 const resolveTheme = (preference: ThemePreference, osTheme: Theme): Theme =>
   preference === 'system' ? osTheme : preference
@@ -26,6 +69,28 @@ const syncPageBackground = () => {
   const backgroundColor = getComputedStyle(document.body).backgroundColor
   document.documentElement.style.backgroundColor = backgroundColor
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', backgroundColor)
+}
+
+/** 把 rgba()/rgb() 转成 #rrggbb（原生侧只认后者） */
+const toHex = (css: string): string | null => {
+  const match = css.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  if (!match) {
+    return null
+  }
+  return '#' + [1, 2, 3].map((i) => Number(match[i]).toString(16).padStart(2, '0')).join('')
+}
+
+/** 状态栏跟随应用背景色；浅色背景用深色图标 */
+const syncNativeBars = (theme: Theme) => {
+  const hex = toHex(getComputedStyle(document.body).backgroundColor)
+  if (!hex) {
+    return
+  }
+  try {
+    window.AppHost?.setStatusBar(hex, theme === 'light')
+  } catch {
+    // 纯浏览器环境没有原生壳
+  }
 }
 
 /** 同步页面主题、根画布背景和支持 theme-color 的浏览器栏。 */
@@ -45,6 +110,7 @@ const applyTheme = (theme: Theme) => {
   if (document.readyState === 'complete') {
     syncPageBackground()
   }
+  syncNativeBars(theme)
   setTimeout(() => {
     body.classList.remove('change-theme')
   }, 0)

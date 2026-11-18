@@ -5,6 +5,7 @@ import { useIsMobile, useMobileViewport, usePreventPageScroll } from './viewport
 import {
   bindChatPersistence,
   initChat,
+  newChat,
   retrySaveSessions,
   selectSession,
   useChatStore,
@@ -24,6 +25,8 @@ import { stopReadAloud } from '../services/speech/readAloud.js'
 import { CollapsedSider } from '../components/sider/CollapsedSider.js'
 import { closeMobileSider } from '../components/sider/mobileSiderState.js'
 import { MobileSider, Sider } from '../components/sider/Sider.js'
+import { closeSettings } from '../components/settings/settingsDialogState.js'
+import { topLayer } from './navStack.js'
 import styles from './App.module.css'
 
 export const App = () => {
@@ -71,6 +74,33 @@ export const App = () => {
     void initChat()
     // 首次打开先在设置里输入 API Key
     ensureApiKey()
+  }, [])
+
+  // 系统返回键：按导航栈逐层退——设置/搜索 → 抽屉 → 对话页回主页 → 退出应用
+  useEffect(() => {
+    window.__appBack = () => {
+      const layer = topLayer()
+      if (layer === 'settings') {
+        closeSettings()
+        return true
+      }
+      if (layer === 'search') {
+        closeSearchPanel()
+        return true
+      }
+      if (layer === 'sider') {
+        closeMobileSider()
+        return true
+      }
+      if (useChatStore.getState().activeId !== null) {
+        newChat()
+        return true
+      }
+      return false
+    }
+    return () => {
+      delete window.__appBack
+    }
   }, [])
 
   return (

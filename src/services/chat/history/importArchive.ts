@@ -1,7 +1,14 @@
 import * as db from '../db.js'
 import { BackupError, fail } from './errors.js'
 import type { SessionIndexEntry } from './format.js'
-import { INDEX_PATH, MANIFEST_PATH, USER_PATH, parseSessionPath, sessionFilesDir } from './paths.js'
+import {
+  INDEX_PATH,
+  MANIFEST_PATH,
+  USER_PATH,
+  parseSessionPath,
+  sessionFilesDir,
+} from './paths.js'
+import { saveUserProfile } from './userProfile.js'
 import { checkManifest, readSessionFile, readSessionIndex } from './schema.js'
 import { toLocalSession } from './toLocal.js'
 import {
@@ -112,8 +119,8 @@ export const importArchive = async (file: File): Promise<void> => {
         checkManifest(await readJson(entry))
         manifest = true
       } else if (path === USER_PATH && !index && imported.size === 0) {
-        // 账号信息（已脱敏）不导入；文件可能缺失。
-        await skipEntry(entry)
+        // 账号信息不导入本地会话，但原文要留着：再导出时原样写回，归档才不会缺条目
+        saveUserProfile(await (await readEntry(entry)).text())
       } else if (sessionId !== null && !index) {
         const local = toLocalSession(readSessionFile(await readJson(entry)))
         if (local.session.id !== sessionId || imported.has(sessionId)) {

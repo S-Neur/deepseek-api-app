@@ -197,6 +197,32 @@ const fragment: Read<Fragment | null> = (value) => {
   }
 }
 
+/**
+ * 自定义扩展字段：缺失或格式不对都当成没有，绝不影响导入。
+ * 这样官方归档（没有这个字段）和我们的归档都能进。
+ */
+const usageDetail = (value: unknown): ChatMessage['ds_usage_detail'] => {
+  if (!value || typeof value !== 'object') {
+    return undefined
+  }
+  const item = value as Record<string, unknown>
+  const token = (input: unknown): number | undefined =>
+    typeof input === 'number' && Number.isFinite(input) && input >= 0 ? Math.round(input) : undefined
+  const input = token(item.input_tokens)
+  const cacheRead = token(item.cache_read_input_tokens)
+  const cacheWrite = token(item.cache_creation_input_tokens)
+  const output = token(item.output_tokens)
+  if (input === undefined && cacheRead === undefined && output === undefined) {
+    return undefined
+  }
+  return {
+    input_tokens: input ?? 0,
+    cache_creation_input_tokens: cacheWrite ?? 0,
+    cache_read_input_tokens: cacheRead ?? 0,
+    output_tokens: output ?? 0,
+  }
+}
+
 const message: Read<ChatMessage> = (value) => {
   const item = record(value)
   return {
@@ -217,6 +243,7 @@ const message: Read<ChatMessage> = (value) => {
     accumulated_token_usage: count(item.accumulated_token_usage),
     inserted_at: time(item.inserted_at),
     fragments: list(fragment)(item.fragments).filter((item): item is Fragment => item !== null),
+    ds_usage_detail: usageDetail(item.ds_usage_detail),
   }
 }
 

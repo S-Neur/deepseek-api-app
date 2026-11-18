@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { TranslationMessage } from '../../i18n/index.js'
+import { ApiError } from '../../services/api/client.js'
 import { transcribe } from '../../services/api/speech.js'
 import { startRecording, type Recording } from '../../services/speech/recorder.js'
 import { useSettings } from '../../services/settings.js'
@@ -13,16 +13,43 @@ export type VoiceInputStatus = 'idle' | 'recording' | 'transcribing'
  */
 const AVAILABLE = typeof window === 'undefined' || window.isSecureContext
 
-const describeRecordingError = (error: unknown): TranslationMessage => {
-  if (error instanceof DOMException) {
-    if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
-      return { key: 'voiceInputPermissionDenied' }
-    }
-    if (error.name === 'NotFoundError') {
-      return { key: 'voiceInputNoDevice' }
-    }
+/**
+ * 失败原因直接展示原始信息（而不是一句"语音输入失败"）。
+ * 自建客户端最难排查的就是 WebView 的能力差异，把名字和消息露出来才能对症下药。
+ */
+const describeRecordingError = (error: unknown): string => {
+  const name = error instanceof DOMException || error instanceof Error ? error.name : ''
+  const message = error instanceof Error ? error.message : String(error)
+  const hint =
+    typeof window !== 'undefined' && !window.isSecureContext
+      ? '（页面不是安全上下文，需要 HTTPS）'
+      : typeof navigator !== 'undefined' && !navigator.mediaDevices
+        ? '（WebView 未提供 navigator.mediaDevices）'
+        : ''
+  return `录音失败${hint}：${[name, message].filter(Boolean).join(' ')}`
+}
+
+const describeTranscribeError = (error: unknown): string => {
+  if (error instanceof ApiError) {
+    return `转写失败（${error.status ?? error.kind}）：${error.message}`
   }
-  return { key: 'voiceInputFailed' }
+  return `转写失败：${error instanceof Error ? error.message : String(error)}`
+}
+
+/** 环境本身不具备录音条件时的说明 */
+const describeUnavailable = (): string => {
+  const parts = [
+    `语音输入不可用`,
+    `isSecureContext=${String(window.isSecureContext)}`,
+    `origin=${location.origin}`,
+  ]
+  if (!navigator.mediaDevices) {
+    parts.push('mediaDevices 未提供')
+  }
+  if (!window.isSecureContext) {
+    parts.push('需要 HTTPS')
+  }
+  return parts.join('，')
 }
 
 /**
@@ -69,7 +96,12 @@ export const useVoiceInput = (onText: (text: string) => void) => {
       } finally {
         recording.cancel()
       }
-      if (operationRef.current !== operation || !audio) {
+      if (operationRef.current !== operation) {
+        return
+      }
+      if (!audio) {
+        // 采到 0 个样本：AudioContext 被挂起，或麦克风没有输入
+        showToast('没有采集到音频：AudioContext 可能被挂起，或麦克风没有输入')
         return
       }
       controller = new AbortController()
@@ -84,9 +116,9 @@ export const useVoiceInput = (onText: (text: string) => void) => {
       } else {
         showToast({ key: 'voiceInputEmpty' })
       }
-    } catch {
+    } catch (error) {
       if (operationRef.current === operation && !controller?.signal.aborted) {
-        showToast({ key: 'voiceInputFailed' })
+        showToast(describeTranscribeError(error))
       }
     } finally {
       if (operationRef.current === operation) {
@@ -98,6 +130,7 @@ export const useVoiceInput = (onText: (text: string) => void) => {
 
   const toggle = useCallback(async () => {
     if (!AVAILABLE) {
+      showToast(describeUnavailable())
       return
     }
     if (status === 'recording') {

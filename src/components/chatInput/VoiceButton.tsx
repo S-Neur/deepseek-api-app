@@ -49,11 +49,7 @@ export const VoiceButton = ({
           aria-label={label}
           aria-pressed={recording}
           aria-disabled={disabled}
-          onClick={() => {
-            if (!disabled) {
-              onClick()
-            }
-          }}
+          onClick={onClick}
         >
           {recording ? (
             <span className={styles.active}>

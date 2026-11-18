@@ -236,6 +236,17 @@ const toAssistant = (message: ChatMessage): AssistantMessage => {
           (block) => block.type !== 'thinking' && (block.type !== 'text' || block.isTemplate)
         )
       : blocks,
+    // 自己导出的归档带 token 拆分，原样恢复；官方归档没有这个字段
+    ...(message.ds_usage_detail
+      ? {
+          usage: {
+            input_tokens: message.ds_usage_detail.input_tokens,
+            cache_creation_input_tokens: message.ds_usage_detail.cache_creation_input_tokens,
+            cache_read_input_tokens: message.ds_usage_detail.cache_read_input_tokens,
+            output_tokens: message.ds_usage_detail.output_tokens,
+          },
+        }
+      : {}),
   }
 }
 

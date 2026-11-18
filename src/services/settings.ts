@@ -17,6 +17,8 @@ type Settings = {
   thinking: boolean
   search: boolean
   siderCollapsed: boolean
+  /** 置顶的会话 ID（最近置顶的排前面）；存在本地设置里，不进会话数据库 */
+  pinnedSessionIds: string[]
 }
 
 const KEYS = {
@@ -28,6 +30,7 @@ const KEYS = {
   thinking: 'chat-demo:thinking',
   search: 'chat-demo:search',
   siderCollapsed: 'chat-demo:sider-collapsed',
+  pinnedSessionIds: 'chat-demo:pinned-sessions',
 } as const
 
 const read = (key: string) => {
@@ -87,6 +90,15 @@ const initialThemePreference = (): ThemePreference => {
 /** 未保存过时使用服务端默认音色 stella（海星） */
 const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide' : 'stella')
 
+const initialPinnedSessionIds = (): string[] => {
+  try {
+    const parsed: unknown = JSON.parse(read(KEYS.pinnedSessionIds) ?? '[]')
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 export const useSettings = create<Settings>(() => ({
   apiKey: read(KEYS.apiKey),
   locale: initialLocale(),
@@ -96,6 +108,7 @@ export const useSettings = create<Settings>(() => ({
   thinking: read(KEYS.thinking) === 'true',
   search: read(KEYS.search) === 'true',
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
+  pinnedSessionIds: initialPinnedSessionIds(),
 }))
 
 export const setLocale = (locale: Locale) => {
@@ -137,4 +150,12 @@ export const setSearch = (search: boolean) => {
 export const setSiderCollapsed = (siderCollapsed: boolean) => {
   write(KEYS.siderCollapsed, String(siderCollapsed))
   useSettings.setState({ siderCollapsed })
+}
+
+/** 置顶 / 取消置顶；新置顶的放到最前面 */
+export const togglePinnedSession = (id: string) => {
+  const current = useSettings.getState().pinnedSessionIds
+  const next = current.includes(id) ? current.filter((item) => item !== id) : [id, ...current]
+  write(KEYS.pinnedSessionIds, JSON.stringify(next))
+  useSettings.setState({ pinnedSessionIds: next })
 }

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { popLayer, pushLayer } from '../../app/navStack.js'
 import type { Source } from '../../services/chat/view.js'
 
 /** 右侧「搜索结果」面板：同一入口再次点击收起，换入口时替换内容 */
@@ -10,9 +11,18 @@ type SearchPanelState = {
 
 export const useSearchPanel = create<SearchPanelState>(() => ({ entry: null, sources: [] }))
 
-export const toggleSearchPanel = (entry: string, sources: Source[]) =>
-  useSearchPanel.setState((state) =>
-    state.entry === entry ? { entry: null, sources: [] } : { entry, sources }
-  )
+export const toggleSearchPanel = (entry: string, sources: Source[]) => {
+  const same = useSearchPanel.getState().entry === entry
+  if (same) {
+    popLayer('search')
+    useSearchPanel.setState({ entry: null, sources: [] })
+    return
+  }
+  pushLayer('search')
+  useSearchPanel.setState({ entry, sources })
+}
 
-export const closeSearchPanel = () => useSearchPanel.setState({ entry: null, sources: [] })
+export const closeSearchPanel = () => {
+  popLayer('search')
+  useSearchPanel.setState({ entry: null, sources: [] })
+}

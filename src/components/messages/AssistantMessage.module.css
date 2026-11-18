@@ -108,6 +108,20 @@
   margin-left: auto;
 }
 
+/* 时间 / token / 缓存命中：贴在操作行最右侧 */
+.meta {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  user-select: none;
+  cursor: default;
+}
+
 .summary {
   display: flex;
   align-items: center;

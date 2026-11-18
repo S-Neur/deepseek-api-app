@@ -302,6 +302,15 @@ export const IconTrashOutline16 = () => (
   </svg>
 )
 
+export const IconPinOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M10.32 1.52 14.48 5.68l-1.12 1.12-.72-.72-2.6 2.6.2 2.32-1.2 1.2-2.16-2.16-3.6 3.6-.92-.92 3.6-3.6L3.8 6.96l1.2-1.2 2.32.2 2.6-2.6-.72-.72 1.12-1.12Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
 export const IconWarningOutline16 = () => (
   <svg width={14} height={14} viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
     <g clipPath="url(#clip0_44547_450044)">

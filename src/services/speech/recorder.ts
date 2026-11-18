@@ -19,12 +19,17 @@ export type Recording = {
   analyser: AnalyserNode
 }
 
-/** 开始录音；到达时长上限时调用 onLimit，由调用方决定何时 stop */
+/**
+ * 开始录音；到达时长上限时调用 onLimit，由调用方决定何时 stop。
+ *
+ * AudioContext 必须在这里、也就是用户手势的同步调用栈里创建。
+ * 如果先 await getUserMedia 再创建，Chrome / Android WebView 会把新创建的
+ * AudioContext 置为 suspended，ScriptProcessorNode 不再回调，
+ * 采到的样本数为 0 —— 表现为"点了录音、没有任何反应、也不报错"。
+ */
 export const startRecording = async (onLimit: () => void): Promise<Recording> => {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
-  })
-  let context: AudioContext | undefined
+  const context = new AudioContext({ sampleRate: SAMPLE_RATE })
+  let stream: MediaStream | undefined
   let source: MediaStreamAudioSourceNode | undefined
   let processor: ScriptProcessorNode | undefined
   let analyser: AnalyserNode | undefined
@@ -46,14 +51,16 @@ export const startRecording = async (onLimit: () => void): Promise<Recording> =>
         // 继续释放其余资源。
       }
     }
-    for (const track of stream.getTracks()) {
+    for (const track of stream?.getTracks() ?? []) {
       track.stop()
     }
-    void context?.close().catch(() => {})
+    void context.close().catch(() => {})
   }
 
   try {
-    context = new AudioContext({ sampleRate: SAMPLE_RATE })
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+    })
     source = context.createMediaStreamSource(stream)
     processor = context.createScriptProcessor(BUFFER_SIZE, 1, 1)
     // 频谱分析用：串在录音链路中间（原样透传），WebKit 不会处理未连到输出的分析节点
@@ -78,9 +85,9 @@ export const startRecording = async (onLimit: () => void): Promise<Recording> =>
     analyser.connect(processor)
     // ScriptProcessorNode 只有连到输出才会持续回调；输出缓冲保持静音
     processor.connect(context.destination)
-    // 在 await getUserMedia 之后创建，iOS 上可能处于 suspended
+    // 手势里创建的通常已经是 running，这里兜底
     if (context.state === 'suspended') {
-      void context.resume().catch(() => {})
+      await context.resume().catch(() => {})
     }
 
     return {
