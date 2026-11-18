@@ -14,9 +14,11 @@ tmp/
 .env.*
 !.env.example
 
-# 构建产物与签名材料不进版本库
+# 签名材料不进版本库
 android/keystore/
 android/assets/
 
-# ����ú�ѡͼ����Ȩ״̬�����������������ֿ�
-assets/candidates/
+# 设计用候选图：只保留鲸鱼娘两个（CC BY-NC-SA 4.0，见 NOTICE）
+assets/candidates/*
+!assets/candidates/3-鲸鱼娘浅蓝.png
+!assets/candidates/4-鲸鱼娘白底.png
