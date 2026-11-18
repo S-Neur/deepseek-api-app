@@ -11,6 +11,16 @@
 官方 App 的免费额度有限流。用 API 则是按 token 计费、没有每日条数上限，
 重度个人使用每月几十块，还能自己决定界面。
 
+## 截图
+
+| 深度思考 + 搜索过程 | 回答、引用与 token 统计 | 轮次跳转 |
+| --- | --- | --- |
+| ![搜索过程](docs/screenshots/01-chat-streaming.jpg) | ![回答](docs/screenshots/02-chat-answer.jpg) | ![轮次](docs/screenshots/03-turn-panel.jpg) |
+
+| 通用设置 | 数据管理 |
+| --- | --- |
+| ![通用设置](docs/screenshots/04-settings-general.jpg) | ![数据管理](docs/screenshots/05-settings-data.jpg) |
+
 ## 功能
 
 对话相关部分沿用上游：思考过程、联网搜索、深度思考搜索、阅读链接、文件解析、
